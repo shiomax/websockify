@@ -325,12 +325,15 @@ class WebSockifyServer():
             file_only=False,
             run_once=False, timeout=0, idle_timeout=0, traffic=False,
             tcp_keepalive=True, tcp_keepcnt=None, tcp_keepidle=None,
-            tcp_keepintvl=None, ssl_ciphers=None, ssl_options=0):
+            tcp_keepintvl=None, ssl_ciphers=None, ssl_options=0,
+            listen_sock=None, listen_sock_mode=None):
 
         # settings
         self.RequestHandlerClass = RequestHandlerClass
         self.verbose        = verbose
         self.listen_fd      = listen_fd
+        self.listen_sock         = listen_sock
+        self.listen_sock_mode    = listen_sock_mode
         self.listen_host    = listen_host
         self.listen_port    = listen_port
         self.prefer_ipv6    = source_is_ipv6
@@ -387,6 +390,8 @@ class WebSockifyServer():
         self.msg("WebSocket server settings:")
         if self.listen_fd != None:
             self.msg("  - Listen for inetd connections")
+        elif self.listen_sock != None:
+            self.msg("  - Listen on unix socket %s", self.listen_sock)
         else:
             self.msg("  - Listen on %s:%s",
                     self.listen_host, self.listen_port)
@@ -700,6 +705,17 @@ class WebSockifyServer():
 
         if self.listen_fd != None:
             lsock = socket.fromfd(self.listen_fd, socket.AF_INET, socket.SOCK_STREAM)
+        elif self.listen_sock != None:
+            # Make sure the socket does not already exist
+            try:
+                os.unlink(self.listen_sock)
+            except OSError:
+                if os.path.exists(self.listen_sock):
+                    raise
+            lsock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            lsock.bind(self.listen_sock)
+            os.chmod(self.listen_sock, self.listen_sock_mode)
+            lsock.listen(100)
         else:
             lsock = self.socket(self.listen_host, self.listen_port, False,
                                 self.prefer_ipv6,
@@ -766,6 +782,9 @@ class WebSockifyServer():
                             ready = select.select([lsock], [], [], 1)[0]
                             if lsock in ready:
                                 startsock, address = lsock.accept()
+                                # Unix Socket will not report address (empty string), but address[0] is logged a bunch
+                                if self.listen_sock != None:
+                                    address = [ self.listen_sock ]
                             else:
                                 continue
                         except self.Terminate:
