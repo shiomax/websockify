@@ -330,35 +330,35 @@ class WebSockifyServer():
 
         # settings
         self.RequestHandlerClass = RequestHandlerClass
-        self.verbose        = verbose
-        self.listen_fd      = listen_fd
+        self.verbose             = verbose
+        self.listen_fd           = listen_fd
         self.listen_sock         = listen_sock
         self.listen_sock_mode    = listen_sock_mode
-        self.listen_host    = listen_host
-        self.listen_port    = listen_port
-        self.prefer_ipv6    = source_is_ipv6
-        self.ssl_only       = ssl_only
-        self.ssl_ciphers    = ssl_ciphers
-        self.ssl_options    = ssl_options
-        self.verify_client  = verify_client
-        self.daemon         = daemon
-        self.run_once       = run_once
-        self.timeout        = timeout
-        self.idle_timeout   = idle_timeout
-        self.traffic        = traffic
-        self.file_only      = file_only
-        self.web_auth       = web_auth
+        self.listen_host         = listen_host
+        self.listen_port         = listen_port
+        self.prefer_ipv6         = source_is_ipv6
+        self.ssl_only            = ssl_only
+        self.ssl_ciphers         = ssl_ciphers
+        self.ssl_options         = ssl_options
+        self.verify_client       = verify_client
+        self.daemon              = daemon
+        self.run_once            = run_once
+        self.timeout             = timeout
+        self.idle_timeout        = idle_timeout
+        self.traffic             = traffic
+        self.file_only           = file_only
+        self.web_auth            = web_auth
 
-        self.launch_time    = time.time()
-        self.ws_connection  = False
-        self.handler_id     = 1
-        self.terminating    = False
+        self.launch_time         = time.time()
+        self.ws_connection       = False
+        self.handler_id          = 1
+        self.terminating         = False
 
-        self.logger         = self.get_logger()
-        self.tcp_keepalive  = tcp_keepalive
-        self.tcp_keepcnt    = tcp_keepcnt
-        self.tcp_keepidle   = tcp_keepidle
-        self.tcp_keepintvl  = tcp_keepintvl
+        self.logger              = self.get_logger()
+        self.tcp_keepalive       = tcp_keepalive
+        self.tcp_keepcnt         = tcp_keepcnt
+        self.tcp_keepidle        = tcp_keepidle
+        self.tcp_keepintvl       = tcp_keepintvl
 
         # keyfile path must be None if not specified
         self.key = None
