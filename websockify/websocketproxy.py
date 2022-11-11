@@ -113,7 +113,7 @@ Traffic Legend:
             raise self.CClose(1011, "Failed to connect to downstream server")
 
         # Option unavailable when listening to unix socket
-        if not self.server.listen_sock:
+        if not self.server.unix_listen:
             self.request.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
         if not self.server.wrap_cmd and not self.server.unix_target:
             tsock.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
@@ -495,10 +495,8 @@ def websockify_init():
             help="list of ciphers allowed for connection. For a list of "
             "supported ciphers run `openssl ciphers`")
     parser.add_option("--unix-listen",
-            dest="listen_sock",
-            help="listen to unix socket", metavar="FILE")
-    parser.add_option("--unix-listen-mode",
-            dest="listen_sock_mode", default=None,
+            help="listen to unix socket", metavar="FILE", default=None)
+    parser.add_option("--unix-listen-mode", default=None,
             help="specify mode for unix socket (defaults to 0600)")
     parser.add_option("--unix-target",
             help="connect to unix socket target", metavar="FILE")
@@ -655,16 +653,16 @@ def websockify_init():
 
     if opts.inetd:
         opts.listen_fd = sys.stdin.fileno()
-    elif opts.listen_sock:
-        if opts.listen_sock_mode:
+    elif opts.unix_listen:
+        if opts.unix_listen_mode:
             try:
                 # Parse octal notation (like 750)
-                opts.listen_sock_mode = int(opts.listen_sock_mode, 8)
+                opts.unix_listen_mode = int(opts.unix_listen_mode, 8)
             except ValueError:
                 parser.error("Error parsing listen unix socket mode")
         else:
             # Default to 0600 (Owner Read/Write)
-            opts.listen_sock_mode = stat.S_IREAD | stat.S_IWRITE
+            opts.unix_listen_mode = stat.S_IREAD | stat.S_IWRITE
     else:
         if len(args) < 1:
             parser.error("Too few arguments")

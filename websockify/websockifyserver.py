@@ -326,14 +326,14 @@ class WebSockifyServer():
             run_once=False, timeout=0, idle_timeout=0, traffic=False,
             tcp_keepalive=True, tcp_keepcnt=None, tcp_keepidle=None,
             tcp_keepintvl=None, ssl_ciphers=None, ssl_options=0,
-            listen_sock=None, listen_sock_mode=None):
+            unix_listen=None, unix_listen_mode=None):
 
         # settings
         self.RequestHandlerClass = RequestHandlerClass
         self.verbose             = verbose
         self.listen_fd           = listen_fd
-        self.listen_sock         = listen_sock
-        self.listen_sock_mode    = listen_sock_mode
+        self.unix_listen         = unix_listen
+        self.unix_listen_mode    = unix_listen_mode
         self.listen_host         = listen_host
         self.listen_port         = listen_port
         self.prefer_ipv6         = source_is_ipv6
@@ -390,8 +390,8 @@ class WebSockifyServer():
         self.msg("WebSocket server settings:")
         if self.listen_fd != None:
             self.msg("  - Listen for inetd connections")
-        elif self.listen_sock != None:
-            self.msg("  - Listen on unix socket %s", self.listen_sock)
+        elif self.unix_listen != None:
+            self.msg("  - Listen on unix socket %s", self.unix_listen)
         else:
             self.msg("  - Listen on %s:%s",
                     self.listen_host, self.listen_port)
@@ -426,8 +426,9 @@ class WebSockifyServer():
 
     @staticmethod
     def socket(host, port=None, connect=False, prefer_ipv6=False,
-               unix_socket=None, use_ssl=False, tcp_keepalive=True,
-               tcp_keepcnt=None, tcp_keepidle=None, tcp_keepintvl=None):
+               unix_socket=None, unix_socket_mode=None, unix_socket_listen=False,
+               use_ssl=False, tcp_keepalive=True, tcp_keepcnt=None, 
+               tcp_keepidle=None, tcp_keepintvl=None):
         """ Resolve a host (and optional port) to an IPv4 or IPv6
         address. Create a socket. Bind to it if listen is set,
         otherwise connect to it. Return the socket.
@@ -475,8 +476,22 @@ class WebSockifyServer():
                 sock.bind(addrs[0][4])
                 sock.listen(100)
         else:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock.connect(unix_socket)
+            if unix_socket_listen:
+                # Make sure the socket does not already exist
+                try:
+                    os.unlink(unix_socket)
+                except FileNotFoundError:
+                    pass
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                oldmask = os.umask(unix_socket_mode)
+                try:
+                    sock.bind(unix_socket)
+                finally:
+                    os.umask(oldmask)
+                sock.listen(100)
+            else:
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                sock.connect(unix_socket)
 
         return sock
 
@@ -705,17 +720,11 @@ class WebSockifyServer():
 
         if self.listen_fd != None:
             lsock = socket.fromfd(self.listen_fd, socket.AF_INET, socket.SOCK_STREAM)
-        elif self.listen_sock != None:
-            # Make sure the socket does not already exist
-            try:
-                os.unlink(self.listen_sock)
-            except OSError:
-                if os.path.exists(self.listen_sock):
-                    raise
-            lsock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            lsock.bind(self.listen_sock)
-            os.chmod(self.listen_sock, self.listen_sock_mode)
-            lsock.listen(100)
+        elif self.unix_listen != None:
+            lsock = self.socket(host=None,
+                                unix_socket=self.unix_listen, 
+                                unix_socket_mode=self.unix_listen_mode, 
+                                unix_socket_listen=True)
         else:
             lsock = self.socket(self.listen_host, self.listen_port, False,
                                 self.prefer_ipv6,
@@ -783,8 +792,8 @@ class WebSockifyServer():
                             if lsock in ready:
                                 startsock, address = lsock.accept()
                                 # Unix Socket will not report address (empty string), but address[0] is logged a bunch
-                                if self.listen_sock != None:
-                                    address = [ self.listen_sock ]
+                                if self.unix_listen != None:
+                                    address = [ self.unix_listen ]
                             else:
                                 continue
                         except self.Terminate:
