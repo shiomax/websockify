@@ -483,7 +483,7 @@ class WebSockifyServer():
                 except FileNotFoundError:
                     pass
                 sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                oldmask = os.umask(unix_socket_mode)
+                oldmask = os.umask(0o777 ^ unix_socket_mode)
                 try:
                     sock.bind(unix_socket)
                 finally:
